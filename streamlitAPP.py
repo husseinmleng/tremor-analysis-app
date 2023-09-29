@@ -8,29 +8,48 @@ import scipy.signal as signal
 from PIL import Image
 import io
 
-def plot_frequency_domain(tremor_amplitudes, sampling_rate=30, cutoff_frequency=5, window_size=5, max_magnitude_threshold=120):
-    # Perform FFT on the tremor signal to obtain the frequency domain representation
-    fft_values = np.fft.fft(tremor_amplitudes)
-    frequencies = np.fft.fftfreq(len(fft_values), d=1/sampling_rate)
-    magnitude = np.abs(fft_values)
+def plot_frequency_domain(file1_frequencies, file2_frequencies, sampling_rate=30, cutoff_frequency=5, window_size=5, max_magnitude_threshold=120):
+    # Perform FFT on the tremor signal to obtain the frequency domain representation for File 1
+    fft_values_file1 = np.fft.fft(file1_frequencies)
+    frequencies_file1 = np.fft.fftfreq(len(fft_values_file1), d=1/sampling_rate)
+    magnitude_file1 = np.abs(fft_values_file1)
 
-    # Apply a low-pass filter to the magnitude spectrum
-    cutoff_idx = int(cutoff_frequency * len(frequencies) / (sampling_rate / 2))
-    magnitude[:cutoff_idx] = signal.medfilt(magnitude[:cutoff_idx], kernel_size=3)
+    # Perform FFT on the tremor signal to obtain the frequency domain representation for File 2
+    fft_values_file2 = np.fft.fft(file2_frequencies)
+    frequencies_file2 = np.fft.fftfreq(len(fft_values_file2), d=1/sampling_rate)
+    magnitude_file2 = np.abs(fft_values_file2)
 
-    # Apply a moving average filter to the magnitude spectrum
-    moving_avg = np.convolve(magnitude, np.ones(window_size) / window_size, mode='same')
+    # Apply a low-pass filter to the magnitude spectrum for File 1
+    cutoff_idx_file1 = int(cutoff_frequency * len(frequencies_file1) / (sampling_rate / 2))
+    magnitude_file1[:cutoff_idx_file1] = signal.medfilt(magnitude_file1[:cutoff_idx_file1], kernel_size=3)
 
-    # Threshold the magnitude values that are greater than max_magnitude_threshold
-    moving_avg[moving_avg > max_magnitude_threshold] = max_magnitude_threshold
+    # Apply a low-pass filter to the magnitude spectrum for File 2
+    cutoff_idx_file2 = int(cutoff_frequency * len(frequencies_file2) / (sampling_rate / 2))
+    magnitude_file2[:cutoff_idx_file2] = signal.medfilt(magnitude_file2[:cutoff_idx_file2], kernel_size=3)
+
+    # Apply a moving average filter to the magnitude spectrum for File 1
+    moving_avg_file1 = np.convolve(magnitude_file1, np.ones(window_size) / window_size, mode='same')
+
+    # Apply a moving average filter to the magnitude spectrum for File 2
+    moving_avg_file2 = np.convolve(magnitude_file2, np.ones(window_size) / window_size, mode='same')
+
+    # Threshold the magnitude values that are greater than max_magnitude_threshold for File 1
+    moving_avg_file1[moving_avg_file1 > max_magnitude_threshold] = max_magnitude_threshold
+
+    # Threshold the magnitude values that are greater than max_magnitude_threshold for File 2
+    moving_avg_file2[moving_avg_file2 > max_magnitude_threshold] = max_magnitude_threshold
 
     # Define the x and y values for plotting
-    xPoints = frequencies
-    yPoints = moving_avg
+    xPoints_file1 = frequencies_file1
+    yPoints_file1 = moving_avg_file1
+
+    xPoints_file2 = frequencies_file2
+    yPoints_file2 = moving_avg_file2
 
     # Create the plot with specified range and styling
     fig, ax = plt.subplots(figsize=(12, 8))
-    ax.plot(xPoints, yPoints, label='Frequency Domain')
+    ax.plot(xPoints_file1, yPoints_file1, label='File 1 Frequency Domain')
+    ax.plot(xPoints_file2, yPoints_file2, label='File 2 Frequency Domain')
 
     ax.set_xlabel('Frequency (Hz)')
     ax.set_ylabel('Amplitude')
@@ -50,46 +69,55 @@ def plot_frequency_domain(tremor_amplitudes, sampling_rate=30, cutoff_frequency=
     plt.close(fig)
     return plot_img
 
-
-def plot_tremor_signal(tremor_amplitudes, window_size=5):
-    avg_amplitude = np.mean(tremor_amplitudes)
+def plot_tremor_signal(tremor_amplitudes1, tremor_amplitudes2, window_size=5):
+    avg_amplitude1 = np.mean(tremor_amplitudes1)
+    avg_amplitude2 = np.mean(tremor_amplitudes2)
 
     # Create time values based on the number of frames
-    time = np.arange(len(tremor_amplitudes))  # Define time outside of the conditional
+    time1 = np.arange(len(tremor_amplitudes1))
+    time2 = np.arange(len(tremor_amplitudes2))
 
-    if avg_amplitude < 1:
-        avg_amplitude = 0
+    if avg_amplitude1 < 1:
+        avg_amplitude1 = 0
 
-    # Check if avg_amplitude is 0
-    if avg_amplitude == 0:
-        moving_avg_tremor = np.zeros_like(tremor_amplitudes)  # Create a signal of zeros
+    if avg_amplitude2 < 1:
+        avg_amplitude2 = 0
+
+    # Check if avg_amplitude is 0 for both files
+    if avg_amplitude1 == 0 and avg_amplitude2 == 0:
+        moving_avg_tremor1 = np.zeros_like(tremor_amplitudes1)
+        moving_avg_tremor2 = np.zeros_like(tremor_amplitudes2)
     else:
-        # Create time values based on the number of frames
-        time = np.arange(len(tremor_amplitudes))
+        # Apply a moving average filter to the tremor signals
+        moving_avg_tremor1 = np.convolve(tremor_amplitudes1, np.ones(window_size) / window_size, mode='same')
+        moving_avg_tremor2 = np.convolve(tremor_amplitudes2, np.ones(window_size) / window_size, mode='same')
 
-        # Apply a moving average filter to the tremor signal
-        moving_avg_tremor = np.convolve(tremor_amplitudes, np.ones(window_size) / window_size, mode='same')
-
-    # Plot the tremor signal and related information
+    # Plot the tremor signals for both files
     fig, ax1 = plt.subplots(figsize=(12, 8))
 
-    # Plot the tremor signal
-    ax1.plot(time, moving_avg_tremor, label='Hand position')
+    # Plot the tremor signals for both files
+    ax1.plot(time1, moving_avg_tremor1, label='File 1 - Hand position', color='blue')
+    ax1.plot(time2, moving_avg_tremor2, label='File 2 - Hand position', color='red')
 
-    # Calculate the range and median amplitude
-    tremor_signal_cm = np.array(moving_avg_tremor) * avg_amplitude  # Assuming tremor amplitude is relative
+    # Calculate the range and median amplitude for both files
+    tremor_signal_cm1 = np.array(moving_avg_tremor1) * avg_amplitude1
+    tremor_signal_cm2 = np.array(moving_avg_tremor2) * avg_amplitude2
 
-    # Plot the range of tremor
-    ax1.axhline(y=max(tremor_signal_cm), color='dimgrey', linestyle='dotted', label='Range of tremor')
-    ax1.axhline(y=min(tremor_signal_cm), color='dimgrey', linestyle='dotted')
+    # Plot the range of tremor and median amplitude for both files
+    ax1.axhline(y=max(tremor_signal_cm1), color='blue', linestyle='dotted', label='File 1 - Range of tremor')
+    ax1.axhline(y=min(tremor_signal_cm1), color='blue', linestyle='dotted')
+    ax1.axhline(y=max(tremor_signal_cm2), color='red', linestyle='dotted', label='File 2 - Range of tremor')
+    ax1.axhline(y=min(tremor_signal_cm2), color='red', linestyle='dotted')
 
-    # Plot the median amplitude
-    ax1.axhline(y=np.median(tremor_signal_cm) / 2, color='dimgrey', linestyle='dashed', label='Median amplitude')
-    ax1.axhline(y=-np.median(tremor_signal_cm) / 2, color='dimgrey', linestyle='dashed')
+    ax1.axhline(y=np.median(tremor_signal_cm1) / 2, color='blue', linestyle='dashed', label='File 1 - Median amplitude')
+    ax1.axhline(y=-np.median(tremor_signal_cm1) / 2, color='blue', linestyle='dashed')
+    ax1.axhline(y=np.median(tremor_signal_cm2) / 2, color='red', linestyle='dashed', label='File 2 - Median amplitude')
+    ax1.axhline(y=-np.median(tremor_signal_cm2) / 2, color='red', linestyle='dashed')
 
     ax1.set_xlabel('Time (frames)')
     ax1.set_ylabel('Tremor Amplitude (cm)')
-    ax1.set_title('Waveform of a Tremor with a Measured Median Amplitude of %.2fcm' % np.median(tremor_signal_cm))
+    ax1.set_title('Waveform of Tremor with Measured Median Amplitude')
+    ax1.legend()
 
     plt.tight_layout()
     plt.subplots_adjust(left=0.125, right=0.9, top=0.88, bottom=0.185)
@@ -100,6 +128,7 @@ def plot_tremor_signal(tremor_amplitudes, window_size=5):
     plot_img = base64.b64encode(buf.read()).decode('utf-8')
     plt.close(fig)
     return plot_img
+
 
 st.title("Tremor Signal Analysis")
 
@@ -125,10 +154,8 @@ if uploaded_file1 is not None and uploaded_file2 is not None:
         fig, ax = plt.subplots(1, 1, figsize=large_plot_size)
 
         # Plot Frequency Domain for File 1 and File 2 in the same figure
-        plot_img_frequency1 = plot_frequency_domain(df1["frequency_domain"].values)
-        plot_img_frequency2 = plot_frequency_domain(df2["frequency_domain"].values)
-        ax.imshow(Image.open(io.BytesIO(base64.b64decode(plot_img_frequency1))), aspect='auto')
-        ax.imshow(Image.open(io.BytesIO(base64.b64decode(plot_img_frequency2))), aspect='auto', alpha=0)
+        plot_img_frequency = plot_frequency_domain(df1["frequency_domain"].values, df2["frequency_domain"].values)
+        ax.imshow(Image.open(io.BytesIO(base64.b64decode(plot_img_frequency))), aspect='auto')
         ax.set_title("Frequency Domain Comparison")
         ax.legend(["File 1", "File 2"])
 
@@ -139,10 +166,8 @@ if uploaded_file1 is not None and uploaded_file2 is not None:
         fig, ax = plt.subplots(1, 1, figsize=large_plot_size)
 
         # Plot Tremor Amplitude for File 1 and File 2 in the same figure
-        plot_img_amplitudes1 = plot_tremor_signal(df1["tremor_amplitude"].values)
-        plot_img_amplitudes2 = plot_tremor_signal(df2["tremor_amplitude"].values)
-        ax.imshow(Image.open(io.BytesIO(base64.b64decode(plot_img_amplitudes1))), aspect='auto')
-        ax.imshow(Image.open(io.BytesIO(base64.b64decode(plot_img_amplitudes2))), aspect='auto', alpha=0.5)
+        plot_img_amplitudes = plot_tremor_signal(df1["tremor_amplitude"].values, df2["tremor_amplitude"].values)
+        ax.imshow(Image.open(io.BytesIO(base64.b64decode(plot_img_amplitudes))), aspect='auto')
         ax.set_title("Tremor Amplitude Comparison")
         ax.legend(["File 1", "File 2"])
 
@@ -151,10 +176,10 @@ if uploaded_file1 is not None and uploaded_file2 is not None:
 
         st.subheader("Download Plots as Images")
         st.markdown(
-            f"Download Frequency Domain Plot (File 1 and File 2) as an image: [Download Plot](data:image/png;base64,{plot_img_frequency1})",
+            f"Download Frequency Domain Plot (File 1 and File 2) as an image: [Download Plot](data:image/png;base64,{plot_img_frequency})",
             unsafe_allow_html=True
         )
         st.markdown(
-            f"Download Tremor Amplitude Plot (File 1 and File 2) as an image: [Download Plot](data:image/png;base64,{plot_img_amplitudes1})",
+            f"Download Tremor Amplitude Plot (File 1 and File 2) as an image: [Download Plot](data:image/png;base64,{plot_img_amplitudes})",
             unsafe_allow_html=True
         )
