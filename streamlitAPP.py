@@ -129,6 +129,16 @@ def plot_tremor_signal(tremor_amplitudes1, tremor_amplitudes2, window_size=5):
     plt.close(fig)
     return plot_img
 
+# Define a function to download plots as images
+def download_plot_as_image(plot_img, filename):
+    b64_img = base64.b64decode(plot_img)
+    st.download_button(
+        label="Download Plot",
+        data=b64_img,
+        key=filename,
+        file_name=filename,
+    )
+
 
 st.title("Tremor Signal Analysis")
 
@@ -141,6 +151,8 @@ if uploaded_file1 is not None and uploaded_file2 is not None:
     st.title("Tremor Signal Analysis")
 
 large_plot_size = (16, 10)
+plot_img_frequency = "None"
+plot_img_amplitudes = "None"
 
 if uploaded_file1 is not None and uploaded_file2 is not None:
     df1 = pd.read_excel(uploaded_file1)
@@ -173,13 +185,18 @@ if uploaded_file1 is not None and uploaded_file2 is not None:
 
         st.pyplot(fig)
 
+        # Download plots as images
 
-        st.subheader("Download Plots as Images")
-        st.markdown(
-            f"Download Frequency Domain Plot (File 1 and File 2) as an image: [Download Plot](data:image/png;base64,{plot_img_frequency})",
-            unsafe_allow_html=True
-        )
-        st.markdown(
-            f"Download Tremor Amplitude Plot (File 1 and File 2) as an image: [Download Plot](data:image/png;base64,{plot_img_amplitudes})",
-            unsafe_allow_html=True
-        )
+st.subheader("Download Plots as Images")
+st.markdown(
+    "Download Frequency Domain Plot (File 1 and File 2) as an image:",
+    unsafe_allow_html=True
+)
+
+download_plot_as_image(plot_img_frequency, "frequency_domain_plot.png")
+
+st.markdown(
+    "Download Tremor Amplitude Plot (File 1 and File 2) as an image:",
+    unsafe_allow_html=True
+)
+download_plot_as_image(plot_img_amplitudes, "tremor_amplitude_plot.png")
