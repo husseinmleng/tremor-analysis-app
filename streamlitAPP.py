@@ -8,6 +8,7 @@ import scipy.signal as signal
 from PIL import Image
 import io
 
+
 def plot_frequency_domain(file1_frequencies, file2_frequencies, sampling_rate=30, cutoff_frequency=5, window_size=5, max_magnitude_threshold=120):
     # Perform FFT on the tremor signal to obtain the frequency domain representation for File 1
     fft_values_file1 = np.fft.fft(file1_frequencies)
@@ -48,8 +49,8 @@ def plot_frequency_domain(file1_frequencies, file2_frequencies, sampling_rate=30
 
     # Create the plot with specified range and styling
     fig, ax = plt.subplots(figsize=(12, 8))
-    ax.plot(xPoints_file1, yPoints_file1, label='File 1 Frequency Domain')
-    ax.plot(xPoints_file2, yPoints_file2, label='File 2 Frequency Domain')
+    ax.plot(xPoints_file1, yPoints_file1, label='File 1 Frequency Domain', color='blue')
+    ax.plot(xPoints_file2, yPoints_file2, label='File 2 Frequency Domain', color='red')
 
     ax.set_xlabel('Frequency (Hz)')
     ax.set_ylabel('Amplitude')
@@ -164,7 +165,7 @@ if uploaded_file1 is not None and uploaded_file2 is not None:
         fig, ax = plt.subplots(1, 1, figsize=large_plot_size)
 
         # Plot Frequency Domain for File 1 and File 2 in the same figure
-        plot_img_frequency = plot_frequency_domain(df1["frequency_domain"].values, df2["frequency_domain"].values)
+        plot_img_frequency = plot_frequency_domain(df1["tremor_amplitude"].values, df2["tremor_amplitude"].values)
         ax.imshow(Image.open(io.BytesIO(base64.b64decode(plot_img_frequency))), aspect='auto')
         ax.set_title("Frequency Domain Comparison")
         ax.legend(["File 1", "File 2"])
