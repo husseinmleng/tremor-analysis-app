@@ -8,15 +8,34 @@ import scipy.signal as signal
 from PIL import Image
 import io
 
+def calculate_metrics(file1_data, file2_data):
+    # Calculate the percentage reduction in tremor amplitude
+    tremor_reduction = ((np.mean(file1_data["tremor_amplitude"].values) - np.mean(file2_data["tremor_amplitude"].values)) / np.mean(file1_data)) * 100
+    print(tremor_reduction)
+    
+    # Calculate the increase in frequency amplitude
+    # Assuming the increase in amplitude refers to the peak amplitude in the FFT
+    fft_peak_file1 = max(np.abs(np.fft.fft(file1_data["frequency_domain"].values)))
+    fft_peak_file2 = max(np.abs(np.fft.fft(file2_data["frequency_domain"].values)))
+    freq_amp_increase = fft_peak_file2 - fft_peak_file1
+    
+    # Calculate the % increase in duration over a certain threshold (e.g., 0.5 Hz)
+    # For simplicity, let's assume the threshold frequency is the mean frequency
+    duration_file1 = len(file1_data["frequency_domain"].values) / len([f for f in file1_data["frequency_domain"].values if f > 0.5])
+    duration_file2 = len(file2_data["frequency_domain"].values) / len([f for f in file2_data["frequency_domain"].values if f > 0.5])
+    duration_increase = ((duration_file2 - duration_file1) / duration_file1) * 100
+    
+    return tremor_reduction, freq_amp_increase, duration_increase
+ 
 
 def plot_frequency_domain(file1_frequencies, file2_frequencies, sampling_rate=30, cutoff_frequency=5, window_size=5, max_magnitude_threshold=120):
     # Perform FFT on the tremor signal to obtain the frequency domain representation for File 1
-    fft_values_file1 = np.fft.fft(file1_frequencies)
+    fft_values_file1 = np.fft.fft(file1_frequencies["tremor_amplitude"].values)
     frequencies_file1 = np.fft.fftfreq(len(fft_values_file1), d=1/sampling_rate)
     magnitude_file1 = np.abs(fft_values_file1)
 
     # Perform FFT on the tremor signal to obtain the frequency domain representation for File 2
-    fft_values_file2 = np.fft.fft(file2_frequencies)
+    fft_values_file2 = np.fft.fft(file2_frequencies["tremor_amplitude"].values)
     frequencies_file2 = np.fft.fftfreq(len(fft_values_file2), d=1/sampling_rate)
     magnitude_file2 = np.abs(fft_values_file2)
 
@@ -47,11 +66,24 @@ def plot_frequency_domain(file1_frequencies, file2_frequencies, sampling_rate=30
     xPoints_file2 = frequencies_file2
     yPoints_file2 = moving_avg_file2
 
+
+
     # Create the plot with specified range and styling
     fig, ax = plt.subplots(figsize=(12, 8))
+    
+    # Calculate the range and median amplitude for both files
+    frequency_cm1 = np.array(moving_avg_file1) * np.mean(file1_frequencies["frequency_domain"].values)
+    frequencies_cm2 = np.array(moving_avg_file2) * np.mean(file2_frequencies["frequency_domain"].values)
+
+    _, freq_amp_increase, duration_increase = calculate_metrics(file1_frequencies, file2_frequencies)
+
+    ax.annotate(f'Reduction in Frequency Amplitude: {np.abs(freq_amp_increase):.2f}%',
+                xy=(0.5, 0.95), xycoords='axes fraction',
+                ha='center', fontsize=12,
+                bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="b", lw=2))
+    
     ax.plot(xPoints_file1, yPoints_file1, label='File 1 Frequency Domain', color='blue')
     ax.plot(xPoints_file2, yPoints_file2, label='File 2 Frequency Domain', color='red')
-
     ax.set_xlabel('Frequency (Hz)')
     ax.set_ylabel('Amplitude')
     ax.set_title('Frequency Domain Representation of Tremor Signal (Smoothed)')
@@ -71,12 +103,12 @@ def plot_frequency_domain(file1_frequencies, file2_frequencies, sampling_rate=30
     return plot_img
 
 def plot_tremor_signal(tremor_amplitudes1, tremor_amplitudes2, window_size=5):
-    avg_amplitude1 = np.mean(tremor_amplitudes1)
-    avg_amplitude2 = np.mean(tremor_amplitudes2)
+    avg_amplitude1 = np.mean(tremor_amplitudes1["tremor_amplitude"].values)
+    avg_amplitude2 = np.mean(tremor_amplitudes2["tremor_amplitude"].values)
 
     # Create time values based on the number of frames
-    time1 = np.arange(len(tremor_amplitudes1))
-    time2 = np.arange(len(tremor_amplitudes2))
+    time1 = np.arange(len(tremor_amplitudes1["tremor_amplitude"].values))
+    time2 = np.arange(len(tremor_amplitudes2["tremor_amplitude"].values))
 
     if avg_amplitude1 < 1:
         avg_amplitude1 = 0
@@ -90,8 +122,8 @@ def plot_tremor_signal(tremor_amplitudes1, tremor_amplitudes2, window_size=5):
         moving_avg_tremor2 = np.zeros_like(tremor_amplitudes2)
     else:
         # Apply a moving average filter to the tremor signals
-        moving_avg_tremor1 = np.convolve(tremor_amplitudes1, np.ones(window_size) / window_size, mode='same')
-        moving_avg_tremor2 = np.convolve(tremor_amplitudes2, np.ones(window_size) / window_size, mode='same')
+        moving_avg_tremor1 = np.convolve(tremor_amplitudes1["tremor_amplitude"].values, np.ones(window_size) / window_size, mode='same')
+        moving_avg_tremor2 = np.convolve(tremor_amplitudes2["tremor_amplitude"].values, np.ones(window_size) / window_size, mode='same')
 
     # Plot the tremor signals for both files
     fig, ax1 = plt.subplots(figsize=(12, 8))
@@ -103,6 +135,15 @@ def plot_tremor_signal(tremor_amplitudes1, tremor_amplitudes2, window_size=5):
     # Calculate the range and median amplitude for both files
     tremor_signal_cm1 = np.array(moving_avg_tremor1) * avg_amplitude1
     tremor_signal_cm2 = np.array(moving_avg_tremor2) * avg_amplitude2
+
+    tremor_reduction, _, _ = calculate_metrics(tremor_amplitudes1, tremor_amplitudes2)
+
+    # Annotate the plot with the tremor reduction metric
+    ax1.annotate(f'Reduction in Tremor: {np.abs(np.mean(tremor_reduction)):.2f}%', 
+                 xy=(0.5, 0.95), xycoords='axes fraction', 
+                 ha='center', fontsize=12, 
+                 bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="b", lw=2))
+
 
     # Plot the range of tremor and median amplitude for both files
     ax1.axhline(y=max(tremor_signal_cm1), color='blue', linestyle='dotted', label='File 1 - Range of tremor')
@@ -140,11 +181,87 @@ def download_plot_as_image(plot_img, filename,label="Download Plot"):
         file_name=filename,
     )
 
+def plot_spectrogram(file1_frequencies, file2_frequencies, sampling_rate=30, cutoff_frequency=5, window_size=5, max_magnitude_threshold=120):
+        # Perform FFT on the tremor signal to obtain the frequency domain representation for File 1
+    fft_values_file1 = np.fft.fft(file1_frequencies["tremor_amplitude"])
+    frequencies_file1 = np.fft.fftfreq(len(fft_values_file1), d=1/sampling_rate)
+    magnitude_file1 = np.abs(fft_values_file1)
+
+    # Perform FFT on the tremor signal to obtain the frequency domain representation for File 2
+    fft_values_file2 = np.fft.fft(file2_frequencies["tremor_amplitude"])
+    frequencies_file2 = np.fft.fftfreq(len(fft_values_file2), d=1/sampling_rate)
+    magnitude_file2 = np.abs(fft_values_file2)
+
+    # Apply a low-pass filter to the magnitude spectrum for File 1
+    cutoff_idx_file1 = int(cutoff_frequency * len(frequencies_file1) / (sampling_rate / 2))
+    magnitude_file1[:cutoff_idx_file1] = signal.medfilt(magnitude_file1[:cutoff_idx_file1], kernel_size=3)
+
+    # Apply a low-pass filter to the magnitude spectrum for File 2
+    cutoff_idx_file2 = int(cutoff_frequency * len(frequencies_file2) / (sampling_rate / 2))
+    magnitude_file2[:cutoff_idx_file2] = signal.medfilt(magnitude_file2[:cutoff_idx_file2], kernel_size=3)
+
+    # Apply a moving average filter to the magnitude spectrum for File 1
+    moving_avg_file1 = np.convolve(magnitude_file1, np.ones(window_size) / window_size, mode='same')
+
+    # Apply a moving average filter to the magnitude spectrum for File 2
+    moving_avg_file2 = np.convolve(magnitude_file2, np.ones(window_size) / window_size, mode='same')
+
+    # Threshold the magnitude values that are greater than max_magnitude_threshold for File 1
+    moving_avg_file1[moving_avg_file1 > max_magnitude_threshold] = max_magnitude_threshold
+
+    # Threshold the magnitude values that are greater than max_magnitude_threshold for File 2
+    moving_avg_file2[moving_avg_file2 > max_magnitude_threshold] = max_magnitude_threshold
+
+    # Calculate the Short-Time Fourier Transform for both tremor signals
+    nperseg = int(window_size * sampling_rate)
+    frequencies1, times1, Sxx1 = signal.spectrogram(moving_avg_file1, fs=sampling_rate, nperseg=nperseg)
+    frequencies2, times2, Sxx2 = signal.spectrogram(moving_avg_file2, fs=sampling_rate, nperseg=nperseg)
+
+    # Apply a low-pass filter to each segment's FFT magnitudes for both files
+    cutoff_idx = int(cutoff_frequency * nperseg / (sampling_rate / 2))
+    Sxx1[:, :cutoff_idx] = signal.medfilt(Sxx1[:, :cutoff_idx], kernel_size=(1, 3))
+    Sxx2[:, :cutoff_idx] = signal.medfilt(Sxx2[:, :cutoff_idx], kernel_size=(1, 3))
+
+    # Apply a moving average filter to the magnitude spectrum for both files
+    for i in range(Sxx1.shape[1]):
+        Sxx1[:, i] = np.convolve(Sxx1[:, i], np.ones(window_size) / window_size, mode='same')
+        Sxx2[:, i] = np.convolve(Sxx2[:, i], np.ones(window_size) / window_size, mode='same')
+
+    # Threshold the magnitude values that are greater than max_magnitude_threshold for both files
+    Sxx1[Sxx1 > max_magnitude_threshold] = max_magnitude_threshold
+    Sxx2[Sxx2 > max_magnitude_threshold] = max_magnitude_threshold
+
+    # Create subplots
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
+
+    # Plot the smoothed spectrogram for File 1
+    cmap = plt.get_cmap('viridis')
+    spec1 = ax1.pcolormesh(times1, frequencies1, 10 * np.log10(Sxx1), shading='gouraud', cmap=cmap)
+    ax1.set_ylabel('Frequency [Hz]')
+    ax1.set_title('Smoothed Spectrogram for File 1')
+    fig.colorbar(spec1, ax=ax1, orientation='vertical', label='Intensity [dB]')
+
+    # Plot the smoothed spectrogram for File 2
+    spec2 = ax2.pcolormesh(times2, frequencies2, 10 * np.log10(Sxx2), shading='gouraud', cmap=cmap)
+    ax2.set_ylabel('Frequency [Hz]')
+    ax2.set_xlabel('Time [sec]')
+    ax2.set_title('Smoothed Spectrogram for File 2')
+    fig.colorbar(spec2, ax=ax2, orientation='vertical', label='Intensity [dB]')
+
+    plt.tight_layout()
+    buf = BytesIO()
+    fig.savefig(buf, format='png')
+    buf.seek(0)
+    plot_img = base64.b64encode(buf.read()).decode('utf-8')
+    plt.close(fig)
+
+    return plot_img
+
 
 st.title("Tremor Signal Analysis")
 
-uploaded_file1 = st.file_uploader("Upload the first Excel file", type=["xlsx", "xls"])
-uploaded_file2 = st.file_uploader("Upload the second Excel file", type=["xlsx", "xls"])
+uploaded_file1 = st.file_uploader("Upload the first Excel file", type=["xlsx", "xls"], key="1")
+uploaded_file2 = st.file_uploader("Upload the second Excel file", type=["xlsx", "xls"], key="2")
 
 large_plot_size = (16, 10)
 
@@ -165,7 +282,7 @@ if uploaded_file1 is not None and uploaded_file2 is not None:
         fig, ax = plt.subplots(1, 1, figsize=large_plot_size)
 
         # Plot Frequency Domain for File 1 and File 2 in the same figure
-        plot_img_frequency = plot_frequency_domain(df1["tremor_amplitude"].values, df2["tremor_amplitude"].values)
+        plot_img_frequency = plot_frequency_domain(df1, df2)
         ax.imshow(Image.open(io.BytesIO(base64.b64decode(plot_img_frequency))), aspect='auto')
         ax.set_title("Frequency Domain Comparison")
         ax.legend(["File 1", "File 2"])
@@ -177,13 +294,24 @@ if uploaded_file1 is not None and uploaded_file2 is not None:
         fig, ax = plt.subplots(1, 1, figsize=large_plot_size)
 
         # Plot Tremor Amplitude for File 1 and File 2 in the same figure
-        plot_img_amplitudes = plot_tremor_signal(df1["tremor_amplitude"].values, df2["tremor_amplitude"].values)
+        plot_img_amplitudes = plot_tremor_signal(df1, df2)
         ax.imshow(Image.open(io.BytesIO(base64.b64decode(plot_img_amplitudes))), aspect='auto')
         ax.set_title("Tremor Amplitude Comparison")
         ax.legend(["File 1", "File 2"])
 
         st.pyplot(fig)
 
+                # Display the spectrogram for File 1 and File 2
+        st.subheader("Spectrogram for File 1 and File 2")
+        plot_img_spectrogram = plot_spectrogram(df1, df2)
+        
+        # Decode the base64 image
+        spectrogram_image = Image.open(BytesIO(base64.b64decode(plot_img_spectrogram)))
+        
+        # Use Streamlit's function to display the image
+        st.image(spectrogram_image, caption="Spectrogram for File 1 and File 2", use_column_width=True)
+
         # Download plots as images
         download_plot_as_image(plot_img_frequency, "frequency_domain_plot.png","Download Frequency Domain Plot")
         download_plot_as_image(plot_img_amplitudes, "tremor_amplitude_plot.png","Download Tremor Amplitude Plot")
+        download_plot_as_image(plot_img_spectrogram, "spectrogram_plot.png","Download Spectrogram Plot")
