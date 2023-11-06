@@ -180,7 +180,7 @@ def download_plot_as_image(plot_img, filename,label="Download Plot"):
         key=filename,
         file_name=filename,
     )
-
+####
 def plot_spectrogram(file1_frequencies, file2_frequencies, sampling_rate=30, cutoff_frequency=5, window_size=5, max_magnitude_threshold=120):
         # Perform FFT on the tremor signal to obtain the frequency domain representation for File 1
     fft_values_file1 = np.fft.fft(file1_frequencies["tremor_amplitude"])
