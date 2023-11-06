@@ -7,7 +7,7 @@ import base64
 import scipy.signal as signal
 from PIL import Image
 import io
-####
+
 def calculate_metrics(file1_data, file2_data):
     # Calculate the percentage reduction in tremor amplitude
     tremor_reduction = ((np.mean(file1_data["tremor_amplitude"].values) - np.mean(file2_data["tremor_amplitude"].values)) / np.mean(file1_data)) * 100
