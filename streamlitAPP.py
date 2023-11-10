@@ -8,6 +8,7 @@ import scipy.signal as signal
 from PIL import Image
 import io
 
+
 def calculate_metrics(file1_data, file2_data):
     # Calculate the percentage reduction in tremor amplitude
     tremor_reduction = ((np.mean(file1_data["tremor_amplitude"].values) - np.mean(file2_data["tremor_amplitude"].values)) / np.mean(file1_data)) * 100
@@ -102,6 +103,7 @@ def plot_frequency_domain(file1_frequencies, file2_frequencies, sampling_rate=30
     plt.close(fig)
     return plot_img
 
+    
 def plot_tremor_signal(tremor_amplitudes1, tremor_amplitudes2, window_size=5):
     avg_amplitude1 = np.mean(tremor_amplitudes1["tremor_amplitude"].values)
     avg_amplitude2 = np.mean(tremor_amplitudes2["tremor_amplitude"].values)
@@ -180,37 +182,30 @@ def download_plot_as_image(plot_img, filename,label="Download Plot"):
         key=filename,
         file_name=filename,
     )
-####
-def plot_spectrogram(file1_frequencies, file2_frequencies, sampling_rate=30, cutoff_frequency=5, window_size=5, max_magnitude_threshold=120):
-        # Perform FFT on the tremor signal to obtain the frequency domain representation for File 1
+
+
+def plot_spectrogram(file1_frequencies, file2_frequencies, sampling_rate=5, cutoff_frequency=1, window_size=5, max_magnitude_threshold=120):
+    # Perform FFT on the tremor signal to obtain the frequency domain representation for File 1 and File 2
     fft_values_file1 = np.fft.fft(file1_frequencies["tremor_amplitude"])
-    frequencies_file1 = np.fft.fftfreq(len(fft_values_file1), d=1/sampling_rate)
-    magnitude_file1 = np.abs(fft_values_file1)
-
-    # Perform FFT on the tremor signal to obtain the frequency domain representation for File 2
     fft_values_file2 = np.fft.fft(file2_frequencies["tremor_amplitude"])
-    frequencies_file2 = np.fft.fftfreq(len(fft_values_file2), d=1/sampling_rate)
+
+    # Calculate the frequency bins for the FFT output
+    frequencies = np.fft.fftfreq(len(fft_values_file1), d=1/sampling_rate)
+    
+    # Apply a low-pass filter to the magnitude spectrum for File 1 and File 2
+    cutoff_idx = int(cutoff_frequency * len(frequencies) / (sampling_rate / 2))
+    magnitude_file1 = np.abs(fft_values_file1)
+    magnitude_file1[:cutoff_idx] = signal.medfilt(magnitude_file1[:cutoff_idx], kernel_size=3)
     magnitude_file2 = np.abs(fft_values_file2)
+    magnitude_file2[:cutoff_idx] = signal.medfilt(magnitude_file2[:cutoff_idx], kernel_size=3)
 
-    # Apply a low-pass filter to the magnitude spectrum for File 1
-    cutoff_idx_file1 = int(cutoff_frequency * len(frequencies_file1) / (sampling_rate / 2))
-    magnitude_file1[:cutoff_idx_file1] = signal.medfilt(magnitude_file1[:cutoff_idx_file1], kernel_size=3)
-
-    # Apply a low-pass filter to the magnitude spectrum for File 2
-    cutoff_idx_file2 = int(cutoff_frequency * len(frequencies_file2) / (sampling_rate / 2))
-    magnitude_file2[:cutoff_idx_file2] = signal.medfilt(magnitude_file2[:cutoff_idx_file2], kernel_size=3)
-
-    # Apply a moving average filter to the magnitude spectrum for File 1
+    # Apply a moving average filter to the magnitude spectrum for File 1 and File 2
     moving_avg_file1 = np.convolve(magnitude_file1, np.ones(window_size) / window_size, mode='same')
-
-    # Apply a moving average filter to the magnitude spectrum for File 2
     moving_avg_file2 = np.convolve(magnitude_file2, np.ones(window_size) / window_size, mode='same')
 
-    # Threshold the magnitude values that are greater than max_magnitude_threshold for File 1
-    moving_avg_file1[moving_avg_file1 > max_magnitude_threshold] = max_magnitude_threshold
-
-    # Threshold the magnitude values that are greater than max_magnitude_threshold for File 2
-    moving_avg_file2[moving_avg_file2 > max_magnitude_threshold] = max_magnitude_threshold
+    # Threshold the magnitude values for both files
+    moving_avg_file1 = np.clip(moving_avg_file1, None, max_magnitude_threshold)
+    moving_avg_file2 = np.clip(moving_avg_file2, None, max_magnitude_threshold)
 
     # Calculate the Short-Time Fourier Transform for both tremor signals
     nperseg = int(window_size * sampling_rate)
@@ -230,32 +225,54 @@ def plot_spectrogram(file1_frequencies, file2_frequencies, sampling_rate=30, cut
     # Threshold the magnitude values that are greater than max_magnitude_threshold for both files
     Sxx1[Sxx1 > max_magnitude_threshold] = max_magnitude_threshold
     Sxx2[Sxx2 > max_magnitude_threshold] = max_magnitude_threshold
+    # Define fixed limits for the color scale based on intensity in dB
+    # Calculate the intensity values for both files
+    intensity_values_file1 = 10 * np.log10(Sxx1)
+    intensity_values_file2 = 10 * np.log10(Sxx2)
 
-    # Create subplots
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
+    # Find the global minimum and maximum intensity values after ensuring there are no negative or zero values in the Sxx arrays
+    global_intensity_min = np.min([intensity_values_file1[intensity_values_file1 > -np.inf], intensity_values_file2[intensity_values_file2 > -np.inf]])
+    global_intensity_max = np.max([intensity_values_file1, intensity_values_file2])
 
-    # Plot the smoothed spectrogram for File 1
-    cmap = plt.get_cmap('viridis')
-    spec1 = ax1.pcolormesh(times1, frequencies1, 10 * np.log10(Sxx1), shading='gouraud', cmap=cmap)
+    # Create subplots with a larger figsize
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(30, 20)) # Adjust figsize here as needed
+    # Additionally, adjust the subplots to fill the figure area
+    plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
+
+
+    # Use a colormap that is similar to the one in the example image
+    cmap = plt.get_cmap('magma')
+    plt.tight_layout()
+    plt.subplots_adjust(left=0.125, right=0.9, top=0.88, bottom=0.185)
+    # Plot Spectrogram for File 1
+    fig1, ax1 = plt.subplots(figsize=(20, 12))
+    cmap = plt.get_cmap('magma')
+    spec1 = ax1.pcolormesh(times1, frequencies1, 10 * np.log10(Sxx1), shading='gouraud', cmap=cmap, vmin=global_intensity_min, vmax=global_intensity_max)
     ax1.set_ylabel('Frequency [Hz]')
-    ax1.set_title('Smoothed Spectrogram for File 1')
-    fig.colorbar(spec1, ax=ax1, orientation='vertical', label='Intensity [dB]')
+    ax1.set_xlabel('Time [sec]')
+    ax1.set_title('Spectrogram for File 1')
+    fig1.colorbar(spec1, ax=ax1, orientation='vertical', label='Intensity')
+    buf1 = BytesIO()
+    fig1.savefig(buf1, format='png')
+    buf1.seek(0)
+    plot_img1 = base64.b64encode(buf1.read()).decode('utf-8')
+    plt.close(fig1)
 
-    # Plot the smoothed spectrogram for File 2
-    spec2 = ax2.pcolormesh(times2, frequencies2, 10 * np.log10(Sxx2), shading='gouraud', cmap=cmap)
+    # Plot Spectrogram for File 2
+    fig2, ax2 = plt.subplots(figsize=(20, 12))
+    spec2 = ax2.pcolormesh(times2, frequencies2, 10 * np.log10(Sxx2), shading='gouraud', cmap=cmap, vmin=global_intensity_min, vmax=global_intensity_max)
     ax2.set_ylabel('Frequency [Hz]')
     ax2.set_xlabel('Time [sec]')
-    ax2.set_title('Smoothed Spectrogram for File 2')
-    fig.colorbar(spec2, ax=ax2, orientation='vertical', label='Intensity [dB]')
+    ax2.set_title('Spectrogram for File 2')
+    fig2.colorbar(spec2, ax=ax2, orientation='vertical', label='Intensity')
+    buf2 = BytesIO()
+    fig2.savefig(buf2, format='png')
+    buf2.seek(0)
+    plot_img2 = base64.b64encode(buf2.read()).decode('utf-8')
+    plt.close(fig2)
 
-    plt.tight_layout()
-    buf = BytesIO()
-    fig.savefig(buf, format='png')
-    buf.seek(0)
-    plot_img = base64.b64encode(buf.read()).decode('utf-8')
-    plt.close(fig)
 
-    return plot_img
+    return plot_img1, plot_img2
 
 
 st.title("Tremor Signal Analysis")
@@ -301,17 +318,18 @@ if uploaded_file1 is not None and uploaded_file2 is not None:
 
         st.pyplot(fig)
 
-                # Display the spectrogram for File 1 and File 2
-        st.subheader("Spectrogram for File 1 and File 2")
-        plot_img_spectrogram = plot_spectrogram(df1, df2)
-        
-        # Decode the base64 image
-        spectrogram_image = Image.open(BytesIO(base64.b64decode(plot_img_spectrogram)))
-        
-        # Use Streamlit's function to display the image
-        st.image(spectrogram_image, caption="Spectrogram for File 1 and File 2", use_column_width=True)
+        plot_img1, plot_img2 = plot_spectrogram(df1, df2)
+
+        # Display the spectrogram for File 1
+        st.subheader("Spectrogram for File 1")
+        st.image(Image.open(BytesIO(base64.b64decode(plot_img1))), caption="Spectrogram for File 1", use_column_width=True)
+
+        # Display the spectrogram for File 2 
+        st.subheader("Spectrogram for File 2")
+        st.image(Image.open(BytesIO(base64.b64decode(plot_img2))), caption="Spectrogram for File 2", use_column_width=True)
 
         # Download plots as images
         download_plot_as_image(plot_img_frequency, "frequency_domain_plot.png","Download Frequency Domain Plot")
         download_plot_as_image(plot_img_amplitudes, "tremor_amplitude_plot.png","Download Tremor Amplitude Plot")
-        download_plot_as_image(plot_img_spectrogram, "spectrogram_plot.png","Download Spectrogram Plot")
+        download_plot_as_image(plot_img1, "spectrogram_plot1.png","Download Spectrogram Plot 1")
+        download_plot_as_image(plot_img2, "spectrogram_plot2.png","Download Spectrogram Plot 2")
