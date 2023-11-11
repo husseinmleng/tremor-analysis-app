@@ -92,9 +92,6 @@ def plot_frequency_domain(file1_frequencies, file2_frequencies, sampling_rate=30
     ax.set_ylim(0, max_magnitude_threshold * 1.1)
 
     ax.legend()
-    plt.tight_layout()
-    plt.subplots_adjust(left=0.125, right=0.9, top=0.88, bottom=0.185)
-
     # Convert the plot to an image and return it
     buf = BytesIO()
     fig.savefig(buf, format='png')
@@ -240,33 +237,30 @@ def plot_spectrogram(file1_frequencies, file2_frequencies, sampling_rate=5, cuto
     plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
 
 
-    # Use a colormap that is similar to the one in the example image
-    cmap = plt.get_cmap('magma')
-    plt.tight_layout()
-    plt.subplots_adjust(left=0.125, right=0.9, top=0.88, bottom=0.185)
+   
     # Plot Spectrogram for File 1
     fig1, ax1 = plt.subplots(figsize=(20, 12))
     cmap = plt.get_cmap('magma')
-    spec1 = ax1.pcolormesh(times1, frequencies1, 10 * np.log10(Sxx1), shading='gouraud', cmap=cmap, vmin=global_intensity_min, vmax=global_intensity_max)
+    spec1 = ax1.pcolormesh(times1, (frequencies1), 10 * np.log10(Sxx1), shading='gouraud', cmap=cmap, vmin=0, vmax=15)
     ax1.set_ylabel('Frequency [Hz]')
-    ax1.set_xlabel('Time [sec]')
+    ax1.set_xlabel('Time')
     ax1.set_title('Spectrogram for File 1')
     fig1.colorbar(spec1, ax=ax1, orientation='vertical', label='Intensity')
     buf1 = BytesIO()
-    fig1.savefig(buf1, format='png')
+    fig1.savefig(buf1, format='png', bbox_inches='tight', pad_inches=0)
     buf1.seek(0)
     plot_img1 = base64.b64encode(buf1.read()).decode('utf-8')
     plt.close(fig1)
 
     # Plot Spectrogram for File 2
     fig2, ax2 = plt.subplots(figsize=(20, 12))
-    spec2 = ax2.pcolormesh(times2, frequencies2, 10 * np.log10(Sxx2), shading='gouraud', cmap=cmap, vmin=global_intensity_min, vmax=global_intensity_max)
+    spec2 = ax2.pcolormesh(times2, (frequencies2), 10 * np.log10(Sxx2), shading='gouraud', cmap=cmap, vmin=0, vmax=15)
     ax2.set_ylabel('Frequency [Hz]')
-    ax2.set_xlabel('Time [sec]')
+    ax2.set_xlabel('Time')
     ax2.set_title('Spectrogram for File 2')
     fig2.colorbar(spec2, ax=ax2, orientation='vertical', label='Intensity')
     buf2 = BytesIO()
-    fig2.savefig(buf2, format='png')
+    fig2.savefig(buf2, format='png', bbox_inches='tight', pad_inches=0)
     buf2.seek(0)
     plot_img2 = base64.b64encode(buf2.read()).decode('utf-8')
     plt.close(fig2)
