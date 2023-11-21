@@ -206,8 +206,8 @@ def plot_spectrogram(file1_frequencies, file2_frequencies, sampling_rate=5, cuto
 
     # Calculate the Short-Time Fourier Transform for both tremor signals
     nperseg = int(window_size * sampling_rate)
-    frequencies1, times1, Sxx1 = signal.spectrogram(moving_avg_file1, fs=sampling_rate, nperseg=nperseg)
-    frequencies2, times2, Sxx2 = signal.spectrogram(moving_avg_file2, fs=sampling_rate, nperseg=nperseg)
+    frequencies1, times1, Sxx1 = signal.spectrogram(moving_avg_file1 , fs=sampling_rate, nperseg=nperseg)
+    frequencies2, times2, Sxx2 = signal.spectrogram(moving_avg_file2 , fs=sampling_rate, nperseg=nperseg)
 
     # Apply a low-pass filter to each segment's FFT magnitudes for both files
     cutoff_idx = int(cutoff_frequency * nperseg / (sampling_rate / 2))
@@ -241,7 +241,7 @@ def plot_spectrogram(file1_frequencies, file2_frequencies, sampling_rate=5, cuto
     # Plot Spectrogram for File 1
     fig1, ax1 = plt.subplots(figsize=(20, 12))
     cmap = plt.get_cmap('magma')
-    spec1 = ax1.pcolormesh(times1, (frequencies1), 10 * np.log10(Sxx1), shading='gouraud', cmap=cmap, vmin=0, vmax=15)
+    spec1 = ax1.pcolormesh(times1, 10 * (frequencies1), 100 * np.log10(Sxx1), shading='gouraud', cmap=cmap, vmin=0, vmax=120)
     ax1.set_ylabel('Frequency [Hz]')
     ax1.set_xlabel('Time')
     ax1.set_title('Spectrogram for File 1')
@@ -254,7 +254,7 @@ def plot_spectrogram(file1_frequencies, file2_frequencies, sampling_rate=5, cuto
 
     # Plot Spectrogram for File 2
     fig2, ax2 = plt.subplots(figsize=(20, 12))
-    spec2 = ax2.pcolormesh(times2, (frequencies2), 10 * np.log10(Sxx2), shading='gouraud', cmap=cmap, vmin=0, vmax=15)
+    spec2 = ax2.pcolormesh(times2, 10 * (frequencies2), 100 * np.log10(Sxx2), shading='gouraud', cmap=cmap, vmin=0, vmax=120)
     ax2.set_ylabel('Frequency [Hz]')
     ax2.set_xlabel('Time')
     ax2.set_title('Spectrogram for File 2')
@@ -267,6 +267,7 @@ def plot_spectrogram(file1_frequencies, file2_frequencies, sampling_rate=5, cuto
 
 
     return plot_img1, plot_img2
+
 
 
 st.title("Tremor Signal Analysis")
