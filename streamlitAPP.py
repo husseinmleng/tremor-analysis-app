@@ -247,7 +247,7 @@ if uploaded_file1 is not None and uploaded_file2 is not None:
 
         # Display the spectrograms for each file
         for i, img in enumerate(spectrogram_imgs):
-            st.subheader(f"Spectrogram for File {i+1}")
+            st.subheader(f"Spectrogram for Day {i+1}")
             st.image(Image.open(BytesIO(base64.b64decode(img))), caption=f"Spectrogram for File {i+1}", use_column_width=True)
        
         download_plot_as_image(plot_img_frequency, "frequency_domain_plot.png","Download Frequency Domain Plot")
