@@ -100,12 +100,9 @@ def plot_tremor_signal(df1, df2, df3, df4, df5, metrics, window_size=5):
 
     # Plot each data frame
     for df, avg_amplitude, time, color, label in zip([df1, df2, df3, df4, df5], avg_amplitudes, times, colors, labels):
-        if avg_amplitude < 1:
-            moving_avg_tremor = np.zeros_like(df["tremor_amplitude"])
-        else:
-            moving_avg_tremor = np.convolve(df["tremor_amplitude"].values, np.ones(window_size) / window_size,
-                                            mode='same')
 
+        moving_avg_tremor = np.convolve(df["tremor_amplitude"].values, np.ones(window_size) / window_size,
+                                            mode='same')
         ax.plot(time, moving_avg_tremor, label=label, color=color)
 
     # Set plot labels and title
@@ -132,68 +129,6 @@ def download_plot_as_image(plot_img, filename, label="Download Plot"):
         key=filename,
         file_name=filename,
     )
-
-
-def plot_spectrogram(dfs, sampling_rate=5, cutoff_frequency=1, window_size=5, max_magnitude_threshold=120):
-    plot_imgs = []
-
-    for df in dfs:
-        # Perform FFT on the tremor signal to obtain the frequency domain representation
-        fft_values = np.fft.fft(df["tremor_amplitude"])
-
-        # Calculate the frequency bins for the FFT output
-        frequencies = np.fft.fftfreq(len(fft_values), d=1 / sampling_rate)
-
-        # Apply a low-pass filter to the magnitude spectrum
-        cutoff_idx = int(cutoff_frequency * len(frequencies) / (sampling_rate / 2))
-        magnitude = np.abs(fft_values)
-        magnitude[:cutoff_idx] = signal.medfilt(magnitude[:cutoff_idx], kernel_size=3)
-
-        # Apply a moving average filter to the magnitude spectrum
-        moving_avg = np.convolve(magnitude, np.ones(window_size) / window_size, mode='same')
-
-        # Threshold the magnitude values
-        moving_avg = np.clip(moving_avg, None, max_magnitude_threshold)
-
-        # Calculate the Short-Time Fourier Transform for the tremor signal
-        nperseg = int(window_size * sampling_rate)
-        frequencies, times, Sxx = signal.spectrogram(moving_avg, fs=sampling_rate, nperseg=nperseg,
-                                                     noverlap=nperseg - 2)
-
-        # # Apply a low-pass filter to each segment's FFT magnitudes
-        # cutoff_idx = int(cutoff_frequency * nperseg / (sampling_rate / 2))
-        # Sxx[:, :cutoff_idx] = signal.medfilt(Sxx[:, :cutoff_idx], kernel_size=(1, 3))
-
-        # Apply a moving average filter to the magnitude spectrum
-        for i in range(Sxx.shape[1]):
-            Sxx[:, i] = np.convolve(Sxx[:, i], np.ones(window_size) / window_size, mode='same')
-
-        # Threshold the magnitude values that are greater than max_magnitude_threshold
-        Sxx[Sxx > max_magnitude_threshold] = max_magnitude_threshold
-
-        # Calculate the intensity values
-        intensity_values = 100 * np.log10(Sxx)
-
-        # Plot Spectrogram
-        fig, ax = plt.subplots(figsize=(20, 12))
-        cmap = plt.get_cmap('magma')
-        spec = ax.pcolormesh(times, 10 * frequencies, intensity_values, shading='gouraud', cmap=cmap, vmin=0, vmax=120)
-        ax.set_ylabel('Frequency [Hz]')
-        ax.set_xlabel('Time')
-        ax.set_title('Spectrogram')
-        fig.colorbar(spec, ax=ax, orientation='vertical', label='Intensity')
-
-        # Save the plot to a buffer
-        buf = BytesIO()
-        fig.savefig(buf, format='png', bbox_inches='tight', pad_inches=0)
-        buf.seek(0)
-        plot_img = base64.b64encode(buf.read()).decode('utf-8')
-        plt.close(fig)
-
-        plot_imgs.append(plot_img)
-
-    return plot_imgs
-
 
 st.title("Tremor Signal Analysis")
 
@@ -246,17 +181,6 @@ if uploaded_file1 is not None and uploaded_file2 is not None:
         ax.legend(["File 1", "File 2"])
 
         st.pyplot(fig)
-
-        # Assuming dfs is a list of data frames
-        dfs = [df1, df2, df3, df4, df5]
-        spectrogram_imgs = plot_spectrogram(dfs, sampling_rate=5, cutoff_frequency=1, window_size=5,
-                                            max_magnitude_threshold=120)
-
-        # Display the spectrograms for each file
-        for i, img in enumerate(spectrogram_imgs):
-            st.subheader(f"Spectrogram for Day {i + 1}")
-            st.image(Image.open(BytesIO(base64.b64decode(img))), caption=f"Spectrogram for File {i + 1}",
-                     use_column_width=True)
 
         download_plot_as_image(plot_img_frequency, "frequency_domain_plot.png", "Download Frequency Domain Plot")
         download_plot_as_image(plot_img_amplitudes, "tremor_amplitude_plot.png", "Download Tremor Amplitude Plot")
