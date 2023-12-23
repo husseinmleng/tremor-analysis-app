@@ -50,7 +50,7 @@ def plot_frequency_domain(df1, df2, df3, df4, df5, metrics, sampling_rate=30, cu
     # Create the plot
     fig, ax = plt.subplots(figsize=(12, 8))
     colors = ['blue', 'red', 'green', 'purple', 'orange']  # Different colors for each data frame
-    labels = ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5']  # Labels for each data frame
+    labels = ['File 1', 'File 2', 'File 3', 'File 4', 'File 5']  # Labels for each data frame
 
     # Display the calculated metrics on the plot
     tremor_reduction, freq_amp_increase, duration_increase = metrics
@@ -78,6 +78,39 @@ def plot_frequency_domain(df1, df2, df3, df4, df5, metrics, sampling_rate=30, cu
     plt.close(fig)
     return plot_img
 
+def plot_mean_amplitude(df_list):
+    # Prepare the figure
+    fig, ax = plt.subplots(figsize=(12, 8))
+
+    # Colors and labels for each data frame
+    colors = ['blue', 'red', 'green', 'purple', 'orange']
+    labels = ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5']
+
+    # Calculate mean amplitudes for each data frame
+    mean_amplitudes = [np.mean(df["tremor_amplitude"].values) for df in df_list]
+
+    # Days for the x-axis
+    days = range(1, len(df_list) + 1)
+
+    # Plot each mean amplitude for each day with a line connecting them
+    ax.plot(days, mean_amplitudes, marker='o', linestyle='-', color='red')
+
+    # Set plot labels and title
+    ax.set_xlabel('Day')
+    ax.set_ylabel('Mean Amplitude')
+    ax.set_title('Mean Amplitude per File Over Time')
+
+    # Adding labels for each point
+    for i, txt in enumerate(labels):
+        ax.annotate(txt, (days[i], mean_amplitudes[i]), textcoords="offset points", xytext=(0,10), ha='center')
+
+    # Convert the plot to an image and return it
+    buf = BytesIO()
+    fig.savefig(buf, format='png')
+    buf.seek(0)
+    plot_img = base64.b64encode(buf.read()).decode('utf-8')
+    plt.close(fig)
+    return plot_img
 
 def plot_tremor_signal(df1, df2, df3, df4, df5, metrics, window_size=5):
     # Calculate average amplitudes and times for each data frame
@@ -89,7 +122,7 @@ def plot_tremor_signal(df1, df2, df3, df4, df5, metrics, window_size=5):
 
     # Colors and labels for each data frame
     colors = ['blue', 'red', 'green', 'purple', 'orange']
-    labels = ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5']
+    labels = ['File 1', 'File 2', 'File 3', 'File 4', 'File 5']
     # Display the calculated metrics on the plot
     tremor_reduction, freq_amp_increase, duration_increase = metrics
     # Annotate the plot with the tremor reduction metric
@@ -167,7 +200,7 @@ if uploaded_file1 is not None and uploaded_file2 is not None:
         plot_img_frequency = plot_frequency_domain(df1, df2, df3, df4, df5, metrics)
         ax.imshow(Image.open(io.BytesIO(base64.b64decode(plot_img_frequency))), aspect='auto')
         ax.set_title("Frequency Domain Comparison")
-        ax.legend(["File 1", "File 2"])
+        ax.legend(["File 1", "File 2", "File 3", "File 4", "File 5"])
 
         st.pyplot(fig)
 
@@ -178,7 +211,16 @@ if uploaded_file1 is not None and uploaded_file2 is not None:
         plot_img_amplitudes = plot_tremor_signal(df1, df2, df3, df4, df5, metrics)
         ax.imshow(Image.open(io.BytesIO(base64.b64decode(plot_img_amplitudes))), aspect='auto')
         ax.set_title("Tremor Amplitude Comparison")
-        ax.legend(["File 1", "File 2"])
+        ax.legend(["File 1", "File 2", "File 3", "File 4", "File 5"])
+        st.pyplot(fig)
+
+        # Create a figure for Tremor Amplitude plots
+        fig, ax = plt.subplots(1, 1, figsize=large_plot_size)
+        #plot mean amplitude
+        plot_img_mean_amplitude = plot_mean_amplitude([df1, df2, df3, df4, df5])
+        ax.imshow(Image.open(io.BytesIO(base64.b64decode(plot_img_mean_amplitude))), aspect='auto')
+        ax.set_title("Mean Amplitude Comparison")
+        ax.legend(["File 1", "File 2", "File 3", "File 4", "File 5"])
 
         st.pyplot(fig)
 
