@@ -45,7 +45,7 @@ def plot_frequency_domain(df1, df2, df3, df4, df5, metrics, sampling_rate=30, cu
     labels = ['File 1', 'File 2', 'File 3', 'File 4', 'File 5']  # Labels for each data frame
 
     # Display the calculated metrics on the plot
-    tremor_reduction, freq_amp_increase, duration_increase = metrics
+    tremor_reduction, freq_amp_increase = metrics
 
     ax.annotate(f'Reduction in Frequency Amplitude: {np.abs(freq_amp_increase):.2f}%',
                 xy=(0.5, 0.95), xycoords='axes fraction',
@@ -116,7 +116,7 @@ def plot_tremor_signal(df1, df2, df3, df4, df5, metrics, window_size=5):
     colors = ['blue', 'red', 'green', 'purple', 'orange']
     labels = ['File 1', 'File 2', 'File 3', 'File 4', 'File 5']
     # Display the calculated metrics on the plot
-    tremor_reduction, freq_amp_increase, duration_increase = metrics
+    tremor_reduction, freq_amp_increase = metrics
     # Annotate the plot with the tremor reduction metric
     ax.annotate(f'Reduction in Tremor: {np.abs(tremor_reduction):.2f}%',
                 xy=(0.5, 0.95), xycoords='axes fraction',
