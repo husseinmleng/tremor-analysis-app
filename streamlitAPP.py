@@ -118,7 +118,7 @@ def plot_tremor_signal(df1, df2, df3, df4, df5, metrics, window_size=5):
     # Display the calculated metrics on the plot
     tremor_reduction, freq_amp_increase = metrics
     # Annotate the plot with the tremor reduction metric
-    ax.annotate(f'Reduction in Tremor: {np.abs(tremor_reduction * 100):.2f}%',
+    ax.annotate(f'Reduction in Tremor: {np.abs(tremor_reduction)}%',
                 xy=(0.5, 0.95), xycoords='axes fraction',
                 ha='center', fontsize=12,
                 bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="b", lw=2))
