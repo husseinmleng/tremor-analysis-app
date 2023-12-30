@@ -21,15 +21,7 @@ def calculate_metrics(file1_data, file2_data):
     fft_peak_file2 = max(np.abs(np.fft.fft(file2_data["frequency_domain"].values)))
     freq_amp_increase = fft_peak_file2 - fft_peak_file1
 
-    # Calculate the % increase in duration over a certain threshold (e.g., 0.5 Hz)
-    # For simplicity, let's assume the threshold frequency is the mean frequency
-    duration_file1 = len(file1_data["frequency_domain"].values) / len(
-        [f for f in file1_data["frequency_domain"].values if f > 0.5])
-    duration_file2 = len(file2_data["frequency_domain"].values) / len(
-        [f for f in file2_data["frequency_domain"].values if f > 0.5])
-    duration_increase = ((duration_file2 - duration_file1) / duration_file1) * 100
-
-    return tremor_reduction, freq_amp_increase, duration_increase
+    return tremor_reduction, freq_amp_increase
 
 
 def plot_frequency_domain(df1, df2, df3, df4, df5, metrics, sampling_rate=30, cutoff_frequency=5, window_size=5,
@@ -126,7 +118,7 @@ def plot_tremor_signal(df1, df2, df3, df4, df5, metrics, window_size=5):
     # Display the calculated metrics on the plot
     tremor_reduction, freq_amp_increase, duration_increase = metrics
     # Annotate the plot with the tremor reduction metric
-    ax.annotate(f'Reduction in Tremor: {np.abs(np.mean(tremor_reduction)):.2f}%',
+    ax.annotate(f'Reduction in Tremor: {np.abs(tremor_reduction):.2f}%',
                 xy=(0.5, 0.95), xycoords='axes fraction',
                 ha='center', fontsize=12,
                 bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="b", lw=2))
