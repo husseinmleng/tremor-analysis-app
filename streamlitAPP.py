@@ -88,9 +88,9 @@ def plot_mean_amplitude(df_list):
     ax.plot(days, mean_amplitudes, marker='o', linestyle='-', color='red')
 
     # Set plot labels and title
-    ax.set_xlabel('File')
+    ax.set_xlabel('Files (Days)')
     ax.set_ylabel('Mean Amplitude')
-    ax.set_title('Tremor amplitude over time')
+    ax.set_title('Tremor Mean Amplitude Over Time')
 
     # Adding labels for each point
     for i, txt in enumerate(labels):
